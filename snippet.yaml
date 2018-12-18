@@ -1,0 +1,32 @@
+@andrewryan1906, I had the same issue with CloudFormation and having to reference API definition from S3. The file has to be pre-uploaded to S3, indeed.
+I solved it by copying it from the Build step of my CodePipeline, as a command in the buildspec.
+
+@xdissent , region and accountId don't have to be hard-coded. CloudFormation will pick up those, from the context it's currently executing.
+Example:
+
+MyLambda:
+    Type: 'AWS::Serverless::Function'
+    Properties:
+      FunctionName: FunctionA
+      Handler: handlerConfig
+      Runtime: dotnetcore2.0
+      CodeUri:
+        Bucket: !Ref BucketA
+        Key: 'Folder1/deploy.zip'
+      MemorySize: 256
+      Timeout: 59
+      Role: !Ref myRole
+MyAPI:
+    Type: "AWS::Serverless::Api"
+    Properties:
+      Name: MessageAPI
+      StageName: latest
+      DefinitionBody:
+        Fn::Transform:
+          Name: AWS::Include
+          Parameters:
+            Location:
+              Fn::Sub: 's3://myBucket/MyAPI/swagger.yaml'
+And here's a snippet from the swagger file:
+
+x-amazon-apigateway-integration:
